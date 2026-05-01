@@ -1,0 +1,58 @@
+project:
+  seed: 42
+  artifact_dir: artifacts
+  output_dir: outputs
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  amazon_dataset: McAuley-Lab/Amazon-Reviews-2023
+  review_config: raw_review_All_Beauty
+  meta_config: raw_meta_All_Beauty
+  absa_dataset: yqzheng/semeval2014
+  sample_size_reviews: 60000
+  sample_size_meta: 150000
+  min_text_chars: 20
+  test_size: 0.15
+  val_size: 0.15
+
+baseline:
+  tfidf_max_features: 30000
+  tfidf_ngram_min: 1
+  tfidf_ngram_max: 2
+  xgb_classifier:
+    n_estimators: 120
+    learning_rate: 0.08
+    max_depth: 6
+    subsample: 0.9
+    colsample_bytree: 0.9
+    reg_lambda: 1.0
+  xgb_regressor:
+    n_estimators: 140
+    learning_rate: 0.07
+    max_depth: 6
+    subsample: 0.9
+    colsample_bytree: 0.9
+    reg_lambda: 1.0
+
+mtl:
+  model_name: roberta-base
+  max_length: 192
+  batch_size: 8
+  learning_rate_encoder: 2.0e-5
+  learning_rate_heads: 1.0e-4
+  epochs: 1
+  weight_decay: 0.01
+  star_weight: 1.0
+  helpfulness_weight: 0.5
+  absa_weight: 1.0
+  max_steps_per_epoch: 20
+
+mlflow:
+  enabled: false
+  experiment_name: amazon_review_intelligence
+
+serving:
+  host: 0.0.0.0
+  port: 8000
+

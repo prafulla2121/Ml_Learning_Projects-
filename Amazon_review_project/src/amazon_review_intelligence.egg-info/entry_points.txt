@@ -1,0 +1,7 @@
+[console_scripts]
+ari-download = amazon_review_intel.data.download:main
+ari-gradio = amazon_review_intel.ui.gradio_app:run
+ari-preprocess = amazon_review_intel.data.preprocess:main
+ari-serve = amazon_review_intel.serving.api:run
+ari-train-baseline = amazon_review_intel.training.train_baseline:main
+ari-train-mtl = amazon_review_intel.training.train_mtl:main

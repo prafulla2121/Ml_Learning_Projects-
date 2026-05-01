@@ -1,0 +1,10 @@
+datasets
+pandas
+numpy
+transformers
+streamlit
+gradio
+scikit-learn
+joblib
+fastapi
+uvicorn
