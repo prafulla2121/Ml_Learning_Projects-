@@ -53,6 +53,19 @@ CREATE TABLE rules (
 
 ALTER TABLE rules ENABLE ROW LEVEL SECURITY;
 
+-- Credentials table for OAuth tokens and API keys
+CREATE TABLE credentials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id),
+    platform TEXT NOT NULL, -- qbo, xero, sage, etc.
+    encrypted_data JSONB NOT NULL, -- stores access_token, refresh_token, realm_id, etc.
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE credentials ENABLE ROW LEVEL SECURITY;
+
 -- RLS Policies
 
 -- For Transactions
@@ -66,3 +79,7 @@ CREATE POLICY client_rules_isolation_policy ON rules
 -- For Clients (Clients can only see their own record)
 CREATE POLICY client_self_isolation_policy ON clients
     USING (id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- For Credentials
+CREATE POLICY client_credentials_isolation_policy ON credentials
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
