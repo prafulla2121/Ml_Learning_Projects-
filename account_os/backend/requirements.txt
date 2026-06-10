@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+asyncpg
+langgraph
+langchain
+langchain-anthropic
+langchain-openai
+python-multipart
+boto3
+psycopg2-binary
+pytest
+httpx
