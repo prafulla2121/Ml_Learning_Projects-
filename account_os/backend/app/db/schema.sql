@@ -39,6 +39,32 @@ CREATE TABLE corrections (
 
 ALTER TABLE corrections ENABLE ROW LEVEL SECURITY;
 
+-- Invoices Table (AR)
+CREATE TABLE invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id),
+    entity_id UUID REFERENCES entities(id),
+    customer_name TEXT NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    currency TEXT DEFAULT 'USD',
+    due_date DATE,
+    status TEXT DEFAULT 'draft', -- draft, sent, paid, overdue
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+
+-- Reminders Table
+CREATE TABLE reminders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    invoice_id UUID REFERENCES invoices(id),
+    reminder_type TEXT, -- email, whatsapp
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status TEXT
+);
+
+ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
+
 -- Users table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -119,4 +145,8 @@ CREATE POLICY client_entities_isolation_policy ON entities
 
 -- For Corrections
 CREATE POLICY client_corrections_isolation_policy ON corrections
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- For Invoices
+CREATE POLICY client_invoices_isolation_policy ON invoices
     USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
