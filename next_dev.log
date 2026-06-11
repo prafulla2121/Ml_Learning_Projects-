@@ -9,8 +9,9 @@
  ⚠ Port 3004 is in use, trying 3005 instead.
  ⚠ Port 3005 is in use, trying 3006 instead.
  ⚠ Port 3006 is in use, trying 3007 instead.
+ ⚠ Port 3007 is in use, trying 3008 instead.
    ▲ Next.js 15.0.3
-   - Local:        http://localhost:3007
+   - Local:        http://localhost:3008
 
  ✓ Starting...
- ✓ Ready in 1839ms
+ ✓ Ready in 2.1s
