@@ -4,13 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 export default function ApprovalQueuePage() {
+  const [syncing, setSyncing] = useState<string | null>(null);
   const [pendingTransactions, setPendingTransactions] = useState([
     {
       id: '1',
       date: '2026-06-10',
       vendor: 'Amazon',
-      amount: '$124.50',
-      suggested_gl: '6200 - Office Supplies',
+      amount: 124.50,
+      suggested_gl: '6200',
       confidence: '98%',
       reason: 'Rule: Amazon -> 6200'
     },
@@ -18,25 +19,40 @@ export default function ApprovalQueuePage() {
       id: '2',
       date: '2026-06-11',
       vendor: 'Starbucks',
-      amount: '$12.00',
-      suggested_gl: '7100 - Staff Welfare',
+      amount: 12.00,
+      suggested_gl: '7100',
       confidence: '85%',
       reason: 'AI Suggestion'
-    },
-    {
-        id: '3',
-        date: '2026-06-12',
-        vendor: 'Microsoft',
-        amount: '$299.99',
-        suggested_gl: '6100 - Software Subscription',
-        confidence: '92%',
-        reason: 'AI Suggestion'
-      }
+    }
   ]);
+
+  const handleApproveAndSync = async (tx: any) => {
+    setSyncing(tx.id);
+    try {
+        const API_BASE_URL = (await import('../config')).default;
+        const response = await fetch(`${API_BASE_URL}/sync/qbo/${tx.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vendor_name: tx.vendor,
+                amount: tx.amount,
+                gl_code: tx.suggested_gl,
+                document_type: 'bill'
+            })
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+            setPendingTransactions(prev => prev.filter(item => item.id !== tx.id));
+        }
+    } catch (err) {
+        console.error('Sync failed', err);
+    } finally {
+        setSyncing(null);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar (Shared) */}
       <aside className="w-64 bg-white border-r flex flex-col">
         <div className="p-6 border-b">
           <h1 className="text-2xl font-bold text-blue-600">AccountOS</h1>
@@ -60,7 +76,6 @@ export default function ApprovalQueuePage() {
                 <th className="p-4 font-semibold text-gray-600">Vendor</th>
                 <th className="p-4 font-semibold text-gray-600">Amount</th>
                 <th className="p-4 font-semibold text-gray-600">Suggested GL</th>
-                <th className="p-4 font-semibold text-gray-600">Confidence</th>
                 <th className="p-4 font-semibold text-gray-600 text-right">Actions</th>
               </tr>
             </thead>
@@ -69,33 +84,31 @@ export default function ApprovalQueuePage() {
                 <tr key={tx.id} className="border-b hover:bg-gray-50 transition-colors">
                   <td className="p-4 text-gray-700">{tx.date}</td>
                   <td className="p-4 font-medium text-gray-900">{tx.vendor}</td>
-                  <td className="p-4 text-gray-900 font-semibold">{tx.amount}</td>
+                  <td className="p-4 text-gray-900 font-semibold">${tx.amount}</td>
                   <td className="p-4">
                     <div className="flex flex-col">
-                        <span className="text-blue-600 hover:underline cursor-pointer font-medium">{tx.suggested_gl}</span>
+                        <span className="text-blue-600 font-medium">{tx.suggested_gl}</span>
                         <span className="text-[10px] text-gray-400">{tx.reason}</span>
                     </div>
                   </td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                      parseInt(tx.confidence) > 90 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {tx.confidence}
-                    </span>
-                  </td>
                   <td className="p-4 text-right">
-                    <div className="flex gap-2 justify-end">
-                      <button className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm transition-colors">Approve</button>
-                      <button className="border border-gray-300 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">Edit</button>
-                    </div>
+                    <button
+                        onClick={() => handleApproveAndSync(tx)}
+                        disabled={syncing === tx.id}
+                        className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm disabled:bg-gray-300"
+                    >
+                        {syncing === tx.id ? 'Syncing...' : 'Approve & Sync'}
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
           {pendingTransactions.length === 0 && (
-            <div className="p-8 text-center text-gray-500">
-                All caught up! No transactions pending approval.
+            <div className="p-12 text-center text-gray-500">
+                <div className="text-4xl mb-4">🎉</div>
+                <p className="font-bold text-gray-900">All caught up!</p>
+                <p className="text-sm">No transactions pending approval.</p>
             </div>
           )}
         </div>

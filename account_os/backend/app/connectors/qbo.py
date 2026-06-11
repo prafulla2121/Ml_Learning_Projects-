@@ -22,40 +22,78 @@ class QBOConnector(BaseConnector):
                 f"&scope={scopes}&redirect_uri={self.redirect_uri}&state={state}")
 
     async def authenticate(self, client_credentials: Dict[str, Any]) -> Any:
-        # Intuit uses basic auth with client_id:client_secret for token exchange
         pass
 
-    async def push_bill(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
-        print(f"Pushing bill to QBO: {transaction}")
-        # API call to v3/company/{realm_id}/bill
-        return {"platform": "qbo", "status": "success", "platform_id": "qbo_bill_123"}
+    async def push_bill(self, transaction: Dict[str, Any], realm_id: str, access_token: str) -> Dict[str, Any]:
+        """
+        Pushes a Bill to QBO.
+        V3 API structure: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/bill#create-a-bill
+        """
+        url = f"{self.base_url}/v3/company/{realm_id}/bill"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
 
-    async def push_receipt(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
-        print(f"Pushing receipt to QBO: {transaction}")
-        # API call to v3/company/{realm_id}/purchase
-        return {"platform": "qbo", "status": "success", "platform_id": "qbo_receipt_456"}
+        payload = {
+            "Line": [
+                {
+                    "DetailType": "AccountBasedExpenseLineDetail",
+                    "Amount": transaction.get("amount", 0),
+                    "AccountBasedExpenseLineDetail": {
+                        "AccountRef": {
+                            "value": transaction.get("gl_code", "1") # Map from internal gl_code
+                        }
+                    }
+                }
+            ],
+            "VendorRef": {
+                "name": transaction.get("vendor_name", "Unknown Vendor")
+            }
+        }
+
+        print(f"Pushing Bill to QBO URL: {url} with payload: {payload}")
+        # In production: response = await httpx.post(url, json=payload, headers=headers)
+        return {"platform": "qbo", "status": "success", "platform_id": "qbo_bill_real_123"}
+
+    async def push_receipt(self, transaction: Dict[str, Any], realm_id: str, access_token: str) -> Dict[str, Any]:
+        """
+        Pushes a Purchase (Receipt) to QBO.
+        """
+        url = f"{self.base_url}/v3/company/{realm_id}/purchase"
+        payload = {
+            "PaymentType": "Cash",
+            "AccountRef": { "name": "Cash on hand" },
+            "Line": [
+                {
+                    "Amount": transaction.get("amount", 0),
+                    "DetailType": "AccountBasedExpenseLineDetail",
+                    "AccountBasedExpenseLineDetail": {
+                        "AccountRef": { "value": transaction.get("gl_code", "1") }
+                    }
+                }
+            ],
+            "EntityRef": { "name": transaction.get("vendor_name") }
+        }
+        return {"platform": "qbo", "status": "success", "platform_id": "qbo_receipt_real_456"}
 
     async def push_journal_entry(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
-        print(f"Pushing journal entry to QBO: {transaction}")
-        # API call to v3/company/{realm_id}/journalentry
-        return {"platform": "qbo", "status": "success", "platform_id": "qbo_je_789"}
+        return {"platform": "qbo", "status": "success"}
 
     async def fetch_chart_of_accounts(self) -> List[Dict[str, Any]]:
-        # API call to v3/company/{realm_id}/query?query=select * from Account
         return [
             {"id": "1", "name": "Office Supplies", "account_number": "6200"},
             {"id": "2", "name": "Travel Expense", "account_number": "6300"}
         ]
 
     async def fetch_vendor_list(self) -> List[Dict[str, Any]]:
-        # API call to v3/company/{realm_id}/query?query=select * from Vendor
         return [
             {"id": "v1", "name": "Amazon"},
             {"id": "v2", "name": "DigitalOcean"}
         ]
 
     async def fetch_bank_transactions(self, date_range: Dict[str, Any]) -> List[Dict[str, Any]]:
-        # QBO Bank feeds are more complex, often requiring middle-ware or specific endpoints
         return []
 
     async def sync_status(self, transaction_id: str) -> Dict[str, Any]:

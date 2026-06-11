@@ -32,8 +32,9 @@ async def test_coding_agent_fallback_to_ai():
         instance = mock_llm_cls.return_value
         instance.ainvoke = AsyncMock(return_value=mock_response)
 
-        agent = CodingAgent()
-        result = await agent.suggest_gl_code(transaction, coa, corrections)
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "fake_key"}):
+            agent = CodingAgent()
+            result = await agent.suggest_gl_code(transaction, coa, corrections)
 
-        assert result["gl_code"] == "6200"
+            assert result["gl_code"] == "6200"
         assert result["source"] == "ai_suggestion"
