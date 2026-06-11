@@ -18,10 +18,11 @@ async def test_intake_agent_extraction(mock_llm_call):
         "transaction_date": "2026-06-10",
         "document_type": "receipt"
     }
-    mock_llm_call.ainvoke.return_value = mock_response
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "fake_key"}):
+        mock_llm_call.ainvoke.return_value = mock_response
 
-    agent = IntakeAgent()
-    result = await agent.process_document("Receipt from Amazon for $45.99 on June 10, 2026")
+        agent = IntakeAgent()
+        result = await agent.process_document("Receipt from Amazon for $45.99 on June 10, 2026")
 
     assert result["vendor_name"] == "Amazon"
     assert result["amount"] == 45.99
@@ -30,9 +31,10 @@ async def test_intake_agent_extraction(mock_llm_call):
 @pytest.mark.asyncio
 async def test_coding_agent_suggestion(mock_llm_call):
     mock_response = {"gl_code": "6200", "confidence": 0.95}
-    mock_llm_call.ainvoke.return_value = mock_response
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "fake_key"}):
+        mock_llm_call.ainvoke.return_value = mock_response
 
-    agent = CodingAgent()
+        agent = CodingAgent()
     coa = [{"id": "1", "name": "Office Supplies", "account_number": "6200"}]
     transaction = {"vendor_name": "Amazon", "amount": 45.99}
 

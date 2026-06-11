@@ -2,7 +2,9 @@ from typing import Annotated, TypedDict, List, Dict, Any, Union
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage, HumanMessage
 from .specialists import IntakeAgent, CodingAgent
+from .tax import TaxComplianceAgent
 from .workflow import ApprovalAgent, SyncAgent
+from ..db.audit import AuditLogger
 
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], "The messages in the conversation"]
@@ -23,6 +25,7 @@ class Orchestrator:
     def __init__(self, connectors: Dict[str, Any] = None):
         self.intake_specialist = IntakeAgent()
         self.coding_specialist = CodingAgent()
+        self.tax_specialist = TaxComplianceAgent()
         self.approval_specialist = ApprovalAgent()
         self.sync_specialist = SyncAgent(connectors)
         self.workflow = StateGraph(AgentState)
@@ -31,6 +34,7 @@ class Orchestrator:
     def _build_graph(self):
         self.workflow.add_node("intake", self.intake_node)
         self.workflow.add_node("coding", self.coding_node)
+        self.workflow.add_node("tax", self.tax_node)
         self.workflow.add_node("approval", self.approval_node)
         self.workflow.add_node("sync", self.sync_node)
         self.workflow.add_node("supervisor", self.supervisor_node)
@@ -43,6 +47,7 @@ class Orchestrator:
             {
                 "intake": "intake",
                 "coding": "coding",
+                "tax": "tax",
                 "approval": "approval",
                 "sync": "sync",
                 "end": END
@@ -51,6 +56,7 @@ class Orchestrator:
 
         self.workflow.add_edge("intake", "supervisor")
         self.workflow.add_edge("coding", "supervisor")
+        self.workflow.add_edge("tax", "supervisor")
         self.workflow.add_edge("approval", "supervisor")
         self.workflow.add_edge("sync", "supervisor")
 
@@ -64,6 +70,8 @@ class Orchestrator:
         if status == "ingested":
             return {"next_agent": "coding"}
         elif status == "coded":
+            return {"next_agent": "tax"}
+        elif status == "tax_validated":
             return {"next_agent": "approval"}
         elif status == "ready_to_sync":
             return {"next_agent": "sync"}
@@ -77,15 +85,36 @@ class Orchestrator:
     async def intake_node(self, state: AgentState) -> Dict[str, Any]:
         print("--- INTAKE AGENT ---")
         result = await self.intake_specialist.process_document(state["raw_text"])
+        await AuditLogger.log_action(
+            client_id=state["client_id"],
+            action="document_ingested",
+            entity_type="document",
+            details=result
+        )
         return {"status": "ingested", "transaction_data": result}
 
     async def coding_node(self, state: AgentState) -> Dict[str, Any]:
         print("--- CODING AGENT ---")
         coa = state.get("chart_of_accounts", [])
         result = await self.coding_specialist.suggest_gl_code(state["transaction_data"], coa)
+        await AuditLogger.log_action(
+            client_id=state["client_id"],
+            action="transaction_coded",
+            entity_type="transaction",
+            details=result
+        )
         return {
             "status": "coded",
             "transaction_data": {**state["transaction_data"], "gl_code": result.get("gl_code")}
+        }
+
+    async def tax_node(self, state: AgentState) -> Dict[str, Any]:
+        print("--- TAX AGENT ---")
+        rules = state.get("rules", [])
+        result = await self.tax_specialist.validate_tax(state["transaction_data"], rules)
+        return {
+            "status": "tax_validated",
+            "transaction_data": {**state["transaction_data"], "tax_validation": result}
         }
 
     async def approval_node(self, state: AgentState) -> Dict[str, Any]:
@@ -104,7 +133,9 @@ class Orchestrator:
         return {"status": "synced", "sync_result": result}
 
     async def run(self, initial_state: AgentState):
+        final_output = initial_state
         async for output in self.app.astream(initial_state):
             for key, value in output.items():
                 print(f"Output from node '{key}': {value}")
-        return output
+                final_output.update(value)
+        return final_output

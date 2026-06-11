@@ -11,6 +11,12 @@ CREATE TABLE clients (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- NOTE: For SQLite compatibility in local development:
+-- JSONB -> TEXT
+-- UUID -> TEXT
+-- gen_random_uuid() -> random hex string
+-- TIMESTAMP WITH TIME ZONE -> TIMESTAMP
+
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 
 -- Entities table (Sub-tenants/Branches/Subsidiaries)
@@ -149,4 +155,39 @@ CREATE POLICY client_corrections_isolation_policy ON corrections
 
 -- For Invoices
 CREATE POLICY client_invoices_isolation_policy ON invoices
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- Audit Logs Table
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id),
+    user_id UUID REFERENCES users(id),
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id UUID,
+    details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY client_audit_isolation_policy ON audit_logs
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- Payments table (AP)
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id),
+    transaction_id UUID REFERENCES transactions(id),
+    amount NUMERIC(15, 2) NOT NULL,
+    scheduled_date DATE,
+    status TEXT DEFAULT 'scheduled', -- scheduled, processing, paid, failed, cancelled
+    payment_method TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY client_payments_isolation_policy ON payments
     USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
