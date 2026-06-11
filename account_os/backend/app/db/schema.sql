@@ -13,6 +13,32 @@ CREATE TABLE clients (
 
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 
+-- Entities table (Sub-tenants/Branches/Subsidiaries)
+CREATE TABLE entities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id),
+    name TEXT NOT NULL,
+    country TEXT,
+    currency TEXT DEFAULT 'USD',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE entities ENABLE ROW LEVEL SECURITY;
+
+-- Learning Loop Table (Corrections)
+CREATE TABLE corrections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id),
+    vendor_name TEXT NOT NULL,
+    original_gl_code TEXT,
+    corrected_gl_code TEXT NOT NULL,
+    user_id UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE corrections ENABLE ROW LEVEL SECURITY;
+
 -- Users table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,6 +55,7 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id UUID REFERENCES clients(id),
+    entity_id UUID REFERENCES entities(id),
     vendor_name TEXT,
     amount NUMERIC(15, 2),
     currency TEXT DEFAULT 'USD',
@@ -45,6 +72,7 @@ ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 CREATE TABLE rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id UUID REFERENCES clients(id),
+    entity_id UUID REFERENCES entities(id),
     rule_type TEXT NOT NULL, -- mapping, approval, tax
     configuration JSONB NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
@@ -57,6 +85,7 @@ ALTER TABLE rules ENABLE ROW LEVEL SECURITY;
 CREATE TABLE credentials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id UUID REFERENCES clients(id),
+    entity_id UUID REFERENCES entities(id),
     platform TEXT NOT NULL, -- qbo, xero, sage, etc.
     encrypted_data JSONB NOT NULL, -- stores access_token, refresh_token, realm_id, etc.
     expires_at TIMESTAMP WITH TIME ZONE,
@@ -82,4 +111,12 @@ CREATE POLICY client_self_isolation_policy ON clients
 
 -- For Credentials
 CREATE POLICY client_credentials_isolation_policy ON credentials
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- For Entities
+CREATE POLICY client_entities_isolation_policy ON entities
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- For Corrections
+CREATE POLICY client_corrections_isolation_policy ON corrections
     USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
