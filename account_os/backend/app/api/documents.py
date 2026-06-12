@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, Depends, HTTPException
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import uuid
 import os
 from ..agents.orchestrator import Orchestrator
@@ -16,6 +16,7 @@ async def upload_documents(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
     platform: str = "qbo",
+    entity_id: Optional[str] = None,
     email: str = Depends(get_current_user_email)
 ):
     """
@@ -33,7 +34,8 @@ async def upload_documents(
             "filename": file.filename,
             "status": "uploaded",
             "email": email,
-            "platform": platform
+            "platform": platform,
+            "entity_id": entity_id
         }
 
         # Handle PDF/Binary vs Text (Basic logic for MVP)
@@ -47,7 +49,10 @@ async def upload_documents(
             text_content = f"[Binary Document: {file.filename}] Content extracted via mock."
 
         # Trigger processing in background
-        background_tasks.add_task(process_document_task, file_id, text_content, email, platform)
+        background_tasks.add_task(process_document_task, file_id, text_content, email, platform, entity_id)
+
+        # Ensure metadata is updated to processing if started via background task
+        uploaded_docs[file_id]["status"] = "queued"
 
         results.append({"file_id": file_id, "filename": file.filename})
 
@@ -63,7 +68,7 @@ from ..db.database import get_db_context
 from sqlalchemy import text
 from datetime import datetime
 
-async def process_document_task(file_id: str, content_text: str, user_email: str, platform: str):
+async def process_document_task(file_id: str, content_text: str, user_email: str, platform: str, entity_id: Optional[str] = None):
     """
     Background task to run the agentic workflow.
     """
@@ -80,6 +85,7 @@ async def process_document_task(file_id: str, content_text: str, user_email: str
     initial_state = {
         "raw_text": content_text,
         "client_id": str(client_id),
+        "entity_id": entity_id,
         "platform": platform,
         "chart_of_accounts": [], # Fetch from DB in production
         "rules": [],             # Fetch from DB in production
@@ -102,10 +108,11 @@ async def process_document_task(file_id: str, content_text: str, user_email: str
         # PERSIST TO DB
         async with get_db_context() as db:
             await db.execute(
-                text("INSERT INTO transactions (id, client_id, vendor_name, amount, currency, transaction_date, status, gl_code) VALUES (:id, :client_id, :vendor, :amount, :currency, :date, :status, :gl)"),
+                text("INSERT INTO transactions (id, client_id, entity_id, vendor_name, amount, currency, transaction_date, status, gl_code) VALUES (:id, :client_id, :entity_id, :vendor, :amount, :currency, :date, :status, :gl)"),
                 {
                     "id": file_id,
                     "client_id": client_id,
+                    "entity_id": entity_id,
                     "vendor": tx_data.get("vendor_name"),
                     "amount": tx_data.get("amount"),
                     "currency": tx_data.get("currency", "USD"),

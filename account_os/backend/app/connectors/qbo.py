@@ -24,11 +24,15 @@ class QBOConnector(BaseConnector):
     async def authenticate(self, client_credentials: Dict[str, Any]) -> Any:
         pass
 
-    async def push_bill(self, transaction: Dict[str, Any], realm_id: str, access_token: str) -> Dict[str, Any]:
+    async def push_bill(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
         """
         Pushes a Bill to QBO.
         V3 API structure: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/bill#create-a-bill
         """
+        # In a real app, these would be retrieved from the database/context
+        realm_id = "mock_realm"
+        access_token = "mock_token"
+
         url = f"{self.base_url}/v3/company/{realm_id}/bill"
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -57,10 +61,14 @@ class QBOConnector(BaseConnector):
         # In production: response = await httpx.post(url, json=payload, headers=headers)
         return {"platform": "qbo", "status": "success", "platform_id": "qbo_bill_real_123"}
 
-    async def push_receipt(self, transaction: Dict[str, Any], realm_id: str, access_token: str) -> Dict[str, Any]:
+    async def push_receipt(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
         """
         Pushes a Purchase (Receipt) to QBO.
         """
+        # In a real app, these would be retrieved from the database/context
+        realm_id = "mock_realm"
+        access_token = "mock_token"
+
         url = f"{self.base_url}/v3/company/{realm_id}/purchase"
         payload = {
             "PaymentType": "Cash",

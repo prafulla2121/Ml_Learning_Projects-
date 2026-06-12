@@ -161,10 +161,10 @@ CREATE POLICY client_invoices_isolation_policy ON invoices
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id UUID REFERENCES clients(id),
+    entity_id UUID REFERENCES entities(id),
     user_id UUID REFERENCES users(id),
     action TEXT NOT NULL,
     entity_type TEXT,
-    entity_id UUID,
     details JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -191,3 +191,32 @@ ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY client_payments_isolation_policy ON payments
     USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- Bank Transactions table
+CREATE TABLE bank_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id),
+    entity_id UUID REFERENCES entities(id),
+    bank_account_id TEXT,
+    transaction_date DATE,
+    description TEXT,
+    amount NUMERIC(15, 2),
+    currency TEXT DEFAULT 'USD',
+    external_id TEXT, -- platform specific bank transaction id
+    status TEXT DEFAULT 'unreconciled', -- unreconciled, reconciled, ignored
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE bank_transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY client_bank_tx_isolation_policy ON bank_transactions
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')));
+
+-- Reconciliation Matches table
+CREATE TABLE reconciliation_matches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    bank_transaction_id UUID REFERENCES bank_transactions(id),
+    accounting_transaction_id UUID REFERENCES transactions(id),
+    confidence NUMERIC(3, 2),
+    matched_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

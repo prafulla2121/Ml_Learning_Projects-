@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 from ..agents.workflow import SyncAgent
 from ..connectors.qbo import QBOConnector
+from ..connectors.sage import SageConnector
+from ..connectors.linnworks import LinnworksConnector
 import os
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -20,13 +22,24 @@ async def sync_to_platform(platform: str, transaction_id: str, transaction_data:
         connector = QBOConnector(QBO_CLIENT_ID, QBO_CLIENT_SECRET, QBO_REDIRECT_URI)
         sync_agent = SyncAgent(connectors={"qbo": connector})
 
-        # In production, fetch realm_id and token from 'credentials' table
-        realm_id = "123456789"
-        access_token = "mock_token"
-
-        # The QBOConnector push_bill expects these extra params
         try:
-            result = await connector.push_bill(transaction_data, realm_id, access_token)
+            result = await connector.push_bill(transaction_data)
+            return result
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    elif platform.lower() == "sage":
+        connector = SageConnector(api_key="mock_key")
+        try:
+            result = await connector.push_bill(transaction_data)
+            return result
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    elif platform.lower() == "linnworks":
+        connector = LinnworksConnector(token="mock_token")
+        try:
+            result = await connector.push_bill(transaction_data)
             return result
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))

@@ -21,13 +21,13 @@ class AuditLogger:
         """
         async with get_db_context() as db:
             await db.execute(
-                text("INSERT INTO audit_logs (client_id, user_id, action, entity_type, entity_id, details) VALUES (:client_id, :user_id, :action, :entity_type, :entity_id, :details)"),
+                text("INSERT INTO audit_logs (client_id, entity_id, user_id, action, entity_type, details) VALUES (:client_id, :entity_id, :user_id, :action, :entity_type, :details)"),
                 {
                     "client_id": client_id,
+                    "entity_id": entity_id,
                     "user_id": user_id,
                     "action": action,
                     "entity_type": entity_type,
-                    "entity_id": entity_id,
                     "details": json.dumps(details) if details else None
                 }
             )
