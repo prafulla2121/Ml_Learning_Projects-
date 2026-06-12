@@ -33,4 +33,20 @@ class InsightsAgent:
                     "description": f"A large payment of {tx.get('amount')} was recorded for {tx.get('vendor_name')}."
                 })
 
+        # 3. Trend Anomaly (Sudden increase in vendor spending)
+        # Mocking trend analysis
+        vendor_totals = {}
+        for tx in transactions:
+            v = tx.get("vendor_name")
+            vendor_totals[v] = vendor_totals.get(v, 0) + float(tx.get("amount", 0))
+
+        for vendor, total in vendor_totals.items():
+            if total > 50000: # Threshold for mock trend
+                 insights.append({
+                    "type": "anomaly",
+                    "severity": "medium",
+                    "title": "Unusual Vendor Spend Trend",
+                    "description": f"Spending for {vendor} has exceeded 50,000 this period, which is 40% above average."
+                })
+
         return insights

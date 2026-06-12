@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
 from ..connectors.qbo import QBOConnector
 from ..connectors.base import BaseConnector
+from ..engine.notifications import NotificationService
 
 class SyncAgent:
     """
@@ -54,6 +55,10 @@ class ApprovalAgent:
                     needs_approval = True
                     reason = f"Amount {amount} exceeds threshold {threshold}"
                     break
+
+        if needs_approval:
+            # Trigger notification
+            await NotificationService.notify_approval_needed("finance-manager@example.com", "tx-id-mock", amount)
 
         return {
             "needs_approval": needs_approval,

@@ -1,28 +1,28 @@
 from typing import Dict, Any, List
 from .base import BaseConnector
 
-class SageConnector(BaseConnector):
+class LinnworksConnector(BaseConnector):
     """
-    Connector for Sage 50 / Intacct.
+    Connector for Linnworks E-commerce.
     """
-    def __init__(self, api_key: str):
-        self.api_key = api_key
+    def __init__(self, token: str):
+        self.token = token
 
     async def authenticate(self, client_credentials: Dict[str, Any]) -> Any:
-        return "sage_session_mock"
+        return "linnworks_session_mock"
 
     async def push_bill(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
-        print(f"Pushing bill to Sage: {transaction.get('vendor_name')}")
-        return {"platform": "sage", "status": "success", "platform_id": "sage_bill_789"}
+        print(f"Pushing expense to Linnworks: {transaction.get('vendor_name')}")
+        return {"platform": "linnworks", "status": "success", "platform_id": "linn_exp_456"}
 
     async def push_receipt(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
-        return {"platform": "sage", "status": "success"}
+        return {"platform": "linnworks", "status": "success"}
 
     async def push_journal_entry(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
-        return {"platform": "sage", "status": "success"}
+        return {"platform": "linnworks", "status": "success"}
 
     async def fetch_chart_of_accounts(self) -> List[Dict[str, Any]]:
-        return [{"id": "sage_1", "name": "Travel", "account_number": "5000"}]
+        return []
 
     async def fetch_vendor_list(self) -> List[Dict[str, Any]]:
         return []

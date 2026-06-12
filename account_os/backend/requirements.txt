@@ -8,6 +8,7 @@ langchain
 langchain-anthropic
 langchain-openai
 python-multipart
+aiosqlite
 boto3
 psycopg2-binary
 pytest

@@ -1,0 +1,14 @@
+{
+    "dashboard": {
+        "title": "Dashboard",
+        "upload": "Upload Documents",
+        "pending": "Pending Approvals",
+        "total_mtd": "Total MTD",
+        "health": "Health Score"
+    },
+    "nav": {
+        "approvals": "Approvals",
+        "transactions": "Transactions",
+        "settings": "Settings"
+    }
+}

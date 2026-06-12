@@ -1,4 +1,4 @@
-from typing import Annotated, TypedDict, List, Dict, Any, Union
+from typing import Annotated, TypedDict, List, Dict, Any, Union, Optional
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage, HumanMessage
 from .specialists import IntakeAgent, CodingAgent
@@ -10,6 +10,7 @@ class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], "The messages in the conversation"]
     next_agent: str
     client_id: str
+    entity_id: Optional[str]
     platform: str
     transaction_data: Dict[str, Any]
     status: str
@@ -87,6 +88,7 @@ class Orchestrator:
         result = await self.intake_specialist.process_document(state["raw_text"])
         await AuditLogger.log_action(
             client_id=state["client_id"],
+            entity_id=state.get("entity_id"),
             action="document_ingested",
             entity_type="document",
             details=result
@@ -99,6 +101,7 @@ class Orchestrator:
         result = await self.coding_specialist.suggest_gl_code(state["transaction_data"], coa)
         await AuditLogger.log_action(
             client_id=state["client_id"],
+            entity_id=state.get("entity_id"),
             action="transaction_coded",
             entity_type="transaction",
             details=result
