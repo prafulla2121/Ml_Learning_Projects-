@@ -83,6 +83,9 @@ CREATE TABLE users (
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY client_users_isolation_policy ON users
+    USING (client_id = (SELECT client_id FROM users WHERE email = current_setting('app.current_user_email')) OR email = current_setting('app.current_user_email'));
+
 -- Transactions table
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

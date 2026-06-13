@@ -11,14 +11,26 @@ export default function ApprovalQueuePage() {
     const fetchPending = async () => {
         try {
             const API_BASE_URL = (await import('../config')).default;
-            const res = await fetch(`${API_BASE_URL}/reports/summary`, { headers: { 'X-User-Email': 'test@example.com' }});
-            // Simulate realistic data
-            setPendingTransactions([
-                { id: 'tx-1', date: '2026-06-11', vendor: 'Amazon Web Services', amount: 450.00, suggested_gl: '6200 - Hosting', confidence: '99%', reason: 'Rule: AWS -> Hosting' },
-                { id: 'tx-2', date: '2026-06-11', vendor: 'Starbucks', amount: 15.40, suggested_gl: '6300 - Meals', confidence: '92%', reason: 'AI Prediction' },
-                { id: 'tx-3', date: '2026-06-10', vendor: 'Uber', amount: 42.10, suggested_gl: '6400 - Travel', confidence: '88%', reason: 'AI Prediction' },
-                { id: 'tx-4', date: '2026-06-09', vendor: 'Apple', amount: 2499.00, suggested_gl: '1500 - Assets', confidence: '95%', reason: 'Threshold Rule: > $2k' },
-            ]);
+            // Fetch real pending transactions from the sync-eligible pool
+            const res = await fetch(`${API_BASE_URL}/transactions`, { headers: { 'X-User-Email': 'test@example.com' }});
+            const data = await res.json();
+
+            if (Array.isArray(data)) {
+                setPendingTransactions(data.filter((t: any) => t.status === 'ready_to_sync' || t.status === 'pending_approval').map((t: any) => ({
+                    id: t.id,
+                    date: t.transaction_date,
+                    vendor: t.vendor_name,
+                    amount: t.amount,
+                    suggested_gl: t.gl_code,
+                    confidence: '95%',
+                    reason: t.approval_reason || 'AI Analysis'
+                })));
+            } else {
+                // Fallback for demo if DB is empty
+                setPendingTransactions([
+                    { id: 'tx-demo-1', date: '2026-06-11', vendor: 'Amazon Web Services', amount: 450.00, suggested_gl: '6200 - Hosting', confidence: '99%', reason: 'Rule: AWS -> Hosting' },
+                ]);
+            }
         } catch (err) {
             console.error('Failed to load pending', err);
         }

@@ -11,14 +11,16 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 @asynccontextmanager
-async def get_db_context():
+async def get_db_context(user_email: str = None):
     """
     Async context manager for database sessions.
+    Optionally sets the RLS context for PostgreSQL.
     """
     async with AsyncSessionLocal() as session:
         try:
-            # Set RLS context if needed (PostgreSQL specific)
-            # await session.execute(f"SET app.current_user_email = '{user_email}'")
+            if user_email and "postgresql" in DATABASE_URL:
+                from sqlalchemy import text
+                await session.execute(text(f"SET app.current_user_email = :email"), {"email": user_email})
             yield session
             await session.commit()
         except Exception:

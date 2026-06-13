@@ -54,5 +54,8 @@ class GLRulesEngine:
                 return float(trans_value) < float(rule_value)
             except (ValueError, TypeError):
                 return False
+        elif operator == "regex":
+            import re
+            return bool(re.search(str(rule_value), str(trans_value), re.IGNORECASE))
 
         return False

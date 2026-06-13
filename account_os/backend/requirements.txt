@@ -9,6 +9,8 @@ langchain-anthropic
 langchain-openai
 python-multipart
 aiosqlite
+pdfplumber
+cryptography
 boto3
 psycopg2-binary
 pytest

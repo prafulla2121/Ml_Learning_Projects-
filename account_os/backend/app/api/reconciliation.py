@@ -23,7 +23,7 @@ async def upload_bank_statement(
     decoded = content.decode("utf-8")
     reader = csv.DictReader(io.StringIO(decoded))
 
-    async with get_db_context() as db:
+    async with get_db_context(user_email=email) as db:
         res = await db.execute(text("SELECT client_id FROM users WHERE email = :email"), {"email": email})
         client_id = res.scalar_one()
 
@@ -52,7 +52,7 @@ async def run_reconciliation(email: str = Depends(get_current_user_email)):
     """
     agent = ReconciliationAgent()
 
-    async with get_db_context() as db:
+    async with get_db_context(user_email=email) as db:
         res = await db.execute(text("SELECT client_id FROM users WHERE email = :email"), {"email": email})
         client_id = res.scalar_one()
 

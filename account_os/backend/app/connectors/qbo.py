@@ -1,5 +1,6 @@
 import httpx
 from typing import List, Dict, Any, Optional
+import os
 from .base import BaseConnector
 
 class QBOConnector(BaseConnector):
@@ -24,14 +25,10 @@ class QBOConnector(BaseConnector):
     async def authenticate(self, client_credentials: Dict[str, Any]) -> Any:
         pass
 
-    async def push_bill(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
+    async def push_bill(self, transaction: Dict[str, Any], realm_id: str = "mock_realm", access_token: str = "mock_token") -> Dict[str, Any]:
         """
-        Pushes a Bill to QBO.
-        V3 API structure: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/bill#create-a-bill
+        Pushes a Bill to QBO using real Intuit V3 API structure.
         """
-        # In a real app, these would be retrieved from the database/context
-        realm_id = "mock_realm"
-        access_token = "mock_token"
 
         url = f"{self.base_url}/v3/company/{realm_id}/bill"
         headers = {
@@ -58,8 +55,17 @@ class QBOConnector(BaseConnector):
         }
 
         print(f"Pushing Bill to QBO URL: {url} with payload: {payload}")
-        # In production: response = await httpx.post(url, json=payload, headers=headers)
-        return {"platform": "qbo", "status": "success", "platform_id": "qbo_bill_real_123"}
+
+        if os.getenv("QBO_DRY_RUN", "true") == "false":
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload, headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    return {"platform": "qbo", "status": "success", "platform_id": data["Bill"]["Id"]}
+                else:
+                    raise Exception(f"QBO Sync Failed: {response.text}")
+
+        return {"platform": "qbo", "status": "success", "platform_id": "qbo_bill_mock_123"}
 
     async def push_receipt(self, transaction: Dict[str, Any]) -> Dict[str, Any]:
         """

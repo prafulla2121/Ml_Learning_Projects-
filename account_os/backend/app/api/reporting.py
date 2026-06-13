@@ -14,7 +14,7 @@ async def get_financial_summary(email: str = Depends(get_current_user_email)):
     """
     agent = ReportingAgent()
 
-    async with get_db_context() as db:
+    async with get_db_context(user_email=email) as db:
         res = await db.execute(text("SELECT client_id FROM users WHERE email = :email"), {"email": email})
         client_id = res.scalar_one()
 
