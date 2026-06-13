@@ -1,11 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
   const [uploading, setUploading] = useState(false);
   const [activeJobs, setActiveJobs] = useState<any[]>([]);
+  const [stats, setStats] = useState({ pending: 0, mtd: 0, health: 98 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+        try {
+            const API_BASE_URL = (await import('../config')).default;
+            const res = await fetch(`${API_BASE_URL}/reports/summary`, {
+                headers: { 'X-User-Email': 'test@example.com' }
+            });
+            const data = await res.json();
+            if (data.p_and_l) {
+                setStats({
+                    pending: 5,
+                    mtd: data.p_and_l.total_expenses + data.p_and_l.total_income,
+                    health: 98
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch stats', err);
+        }
+    };
+    fetchStats();
+  }, []);
 
   const handleFileUpload = async (e: any) => {
     const files = e.target.files;
@@ -79,15 +102,15 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-white border p-6 rounded-xl shadow-sm">
                         <h3 className="text-sm font-medium text-gray-500 mb-2">Pending Approvals</h3>
-                        <p className="text-3xl font-bold text-orange-600">12</p>
+                        <p className="text-3xl font-bold text-orange-600">{stats.pending}</p>
                     </div>
                     <div className="bg-white border p-6 rounded-xl shadow-sm">
                         <h3 className="text-sm font-medium text-gray-500 mb-2">Total MTD</h3>
-                        <p className="text-3xl font-bold text-blue-600">452</p>
+                        <p className="text-3xl font-bold text-blue-600">${stats.mtd.toFixed(2)}</p>
                     </div>
                     <div className="bg-white border p-6 rounded-xl shadow-sm">
                         <h3 className="text-sm font-medium text-gray-500 mb-2">Health Score</h3>
-                        <p className="text-3xl font-bold text-green-600">98%</p>
+                        <p className="text-3xl font-bold text-green-600">{stats.health}%</p>
                     </div>
                 </div>
 

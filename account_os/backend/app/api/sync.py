@@ -4,6 +4,8 @@ from ..agents.workflow import SyncAgent
 from ..connectors.qbo import QBOConnector
 from ..connectors.sage import SageConnector
 from ..connectors.linnworks import LinnworksConnector
+from ..db.database import get_db_context
+from sqlalchemy import text
 import os
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -24,6 +26,13 @@ async def sync_to_platform(platform: str, transaction_id: str, transaction_data:
 
         try:
             result = await connector.push_bill(transaction_data)
+            # Update status in DB on success
+            async with get_db_context() as db:
+                await db.execute(
+                    text("UPDATE transactions SET status = 'synced' WHERE id = :id"),
+                    {"id": transaction_id}
+                )
+                await db.commit()
             return result
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))

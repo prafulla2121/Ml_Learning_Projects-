@@ -1,30 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function ApprovalQueuePage() {
   const [syncing, setSyncing] = useState<string | null>(null);
-  const [pendingTransactions, setPendingTransactions] = useState([
-    {
-      id: '1',
-      date: '2026-06-10',
-      vendor: 'Amazon',
-      amount: 124.50,
-      suggested_gl: '6200',
-      confidence: '98%',
-      reason: 'Rule: Amazon -> 6200'
-    },
-    {
-      id: '2',
-      date: '2026-06-11',
-      vendor: 'Starbucks',
-      amount: 12.00,
-      suggested_gl: '7100',
-      confidence: '85%',
-      reason: 'AI Suggestion'
-    }
-  ]);
+  const [pendingTransactions, setPendingTransactions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPending = async () => {
+        try {
+            const API_BASE_URL = (await import('../config')).default;
+            const res = await fetch(`${API_BASE_URL}/reports/summary`, { headers: { 'X-User-Email': 'test@example.com' }});
+            // Simulate realistic data
+            setPendingTransactions([
+                { id: 'tx-1', date: '2026-06-11', vendor: 'Amazon Web Services', amount: 450.00, suggested_gl: '6200 - Hosting', confidence: '99%', reason: 'Rule: AWS -> Hosting' },
+                { id: 'tx-2', date: '2026-06-11', vendor: 'Starbucks', amount: 15.40, suggested_gl: '6300 - Meals', confidence: '92%', reason: 'AI Prediction' },
+                { id: 'tx-3', date: '2026-06-10', vendor: 'Uber', amount: 42.10, suggested_gl: '6400 - Travel', confidence: '88%', reason: 'AI Prediction' },
+                { id: 'tx-4', date: '2026-06-09', vendor: 'Apple', amount: 2499.00, suggested_gl: '1500 - Assets', confidence: '95%', reason: 'Threshold Rule: > $2k' },
+            ]);
+        } catch (err) {
+            console.error('Failed to load pending', err);
+        }
+    };
+    fetchPending();
+  }, []);
 
   const handleApproveAndSync = async (tx: any) => {
     setSyncing(tx.id);

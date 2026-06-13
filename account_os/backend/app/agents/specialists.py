@@ -22,12 +22,29 @@ class IntakeAgent:
         Extracts structured data from raw text content.
         """
         if not self.llm:
+            # Enhanced mock extraction based on content clues
+            vendor = "Generic Vendor"
+            amount = 100.0
+            doc_type = "bill"
+
+            content_lower = text_content.lower()
+            if "amazon" in content_lower: vendor = "Amazon"
+            if "starbucks" in content_lower: vendor = "Starbucks"; doc_type = "receipt"
+            if "apple" in content_lower: vendor = "Apple"
+            if "uber" in content_lower: vendor = "Uber"; doc_type = "receipt"
+
+            # Simple amount extraction mock
+            import re
+            amount_match = re.search(r"\$(\d+\.\d+)", text_content)
+            if amount_match:
+                amount = float(amount_match.group(1))
+
             return {
-                "vendor_name": "Mock Vendor",
-                "amount": 100.0,
+                "vendor_name": vendor,
+                "amount": amount,
                 "currency": "USD",
                 "transaction_date": "2026-06-11",
-                "document_type": "bill"
+                "document_type": doc_type
             }
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an expert accounting intake assistant. Extract the following fields from the document text in JSON format: vendor_name, amount, currency, transaction_date, and document_type (bill or receipt)."),
